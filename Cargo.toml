@@ -1,8 +1,13 @@
 [package]
 name = "barn"
-version = "0.1.0"
+version = "0.0.1"
+authors = ["Radu Gafita <radugaf@gmail.com"]
+readme = "README.md"
+license = "MIT"
+keywords = ["barn", "editor", "text", "terminal"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+lazy_static = "1.4.0"
