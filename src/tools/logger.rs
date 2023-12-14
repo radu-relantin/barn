@@ -1,10 +1,12 @@
+use lazy_static::lazy_static;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
+use std::sync::Mutex;
 
 /// Represents the different logging levels.
 ///
-/// The log levels are ordered by their importance, with `Fatal` being the most critical
-/// and `Trace` being the least.
+/// Log levels are used to categorize the importance of the log messages.
+/// `Fatal` being the most critical, and `Trace` being the least.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
@@ -18,10 +20,11 @@ pub enum LogLevel {
 
 /// The `Logger` struct provides functionalities for logging messages.
 ///
-/// It allows logging messages at various levels and writes them to a specified file.
-/// The logger ensures that messages are appended to the file, preserving existing content.
+/// It encapsulates a file handle for writing log messages and a log level
+/// which acts as a filter for log messages. Only messages with a level
+/// greater than or equal to the logger's level are written to the file.
 pub struct Logger {
-    file: File,
+    file: Mutex<File>,
     level: LogLevel,
 }
 
@@ -52,7 +55,10 @@ impl Logger {
             .append(true)
             .open(file_path)?;
 
-        Ok(Logger { file, level })
+        Ok(Logger {
+            file: Mutex::new(file),
+            level,
+        })
     }
 
     /// Logs a message at the specified log level.
@@ -72,111 +78,129 @@ impl Logger {
     /// # Examples
     ///
     /// ```
-    /// let mut logger = Logger::new("app.log", LogLevel::Debug).unwrap();
+    /// let logger = Logger::new("app.log", LogLevel::Debug).unwrap();
     /// logger.log(LogLevel::Info, "Application started").unwrap();
     /// ```
-    pub fn log(&mut self, level: LogLevel, message: &str) -> io::Result<()> {
+    pub fn log(&self, level: LogLevel, message: &str) -> io::Result<()> {
         if level <= self.level {
+            let mut file = self.file.lock().unwrap();
             let log_message = format!("[{:?}]: {}\n", level, message);
-            self.file.write_all(log_message.as_bytes())
+            file.write_all(log_message.as_bytes())
         } else {
             Ok(())
         }
     }
 }
 
+lazy_static! {
+    /// Global logger instance.
+    ///
+    /// This static instance provides a globally accessible logger,
+    /// ensuring that all parts of the application can perform logging
+    /// without needing to pass around a logger instance.
+    pub static ref GLOBAL_LOGGER: Mutex<Logger> = Mutex::new(
+        Logger::new("app.log", LogLevel::Debug).expect("Failed to initialize global logger")
+    );
+}
+
 /// Logs a fatal error and exits the program.
 ///
-/// This macro should be used for unrecoverable errors.
+/// Use this macro for unrecoverable errors that should terminate the program.
+/// The message will be logged at the `Fatal` level.
 ///
 /// # Examples
 ///
 /// ```
-/// log_fatal!(logger, "Unrecoverable error: {}", "Out of memory");
+/// log_fatal!("Unrecoverable error: {}", "Out of memory");
 /// ```
 #[macro_export]
 macro_rules! log_fatal {
-    ($logger:expr, $($arg:tt)*) => {
-        $logger.log(LogLevel::Fatal, &format!($($arg)*)).unwrap();
+    ($($arg:tt)*) => {
+        $crate::logger::GLOBAL_LOGGER.lock().unwrap().log($crate::logger::LogLevel::Fatal, &format!($($arg)*)).unwrap();
     };
 }
 
 /// Logs an error message.
 ///
-/// This macro should be used for recoverable errors.
+/// Use this macro for recoverable errors that do not require program termination.
+/// The message will be logged at the `Error` level.
 ///
 /// # Examples
 ///
 /// ```
-/// log_error!(logger, "Error encountered: {}", "File not found");
+/// log_error!("Error encountered: {}", "File not found");
 /// ```
 #[macro_export]
 macro_rules! log_error {
-    ($logger:expr, $($arg:tt)*) => {
-        $logger.log(LogLevel::Error, &format!($($arg)*)).unwrap();
+    ($($arg:tt)*) => {
+        $crate::logger::GLOBAL_LOGGER.lock().unwrap().log($crate::logger::LogLevel::Error, &format!($($arg)*)).unwrap();
     };
 }
 
 /// Logs a warning message.
 ///
-/// This macro should be used for potential issues that do not halt program execution.
+/// Use this macro for potential issues that do not halt program execution but require attention.
+/// The message will be logged at the `Warning` level.
 ///
 /// # Examples
 ///
 /// ```
-/// log_warning!(logger, "Potential issue detected: {}", "Low memory");
+/// log_warning!("Potential issue detected: {}", "Low memory");
 /// ```
 #[macro_export]
 macro_rules! log_warning {
-    ($logger:expr, $($arg:tt)*) => {
-        $logger.log(LogLevel::Warning, &format!($($arg)*)).unwrap();
+    ($($arg:tt)*) => {
+        $crate::logger::GLOBAL_LOGGER.lock().unwrap().log($crate::logger::LogLevel::Warning, &format!($($arg)*)).unwrap();
     };
 }
 
 /// Logs an informational message.
 ///
-/// This macro should be used for general informational messages.
+/// Use this macro for general informational messages.
+/// The message will be logged at the `Info` level.
 ///
 /// # Examples
 ///
 /// ```
-/// log_info!(logger, "Application status: {}", "Running smoothly");
+/// log_info!("Application status: {}", "Running smoothly");
 /// ```
 #[macro_export]
 macro_rules! log_info {
-    ($logger:expr, $($arg:tt)*) => {
-        $logger.log(LogLevel::Info, &format!($($arg)*)).unwrap();
+    ($($arg:tt)*) => {
+        $crate::logger::GLOBAL_LOGGER.lock().unwrap().log($crate::logger::LogLevel::Info, &format!($($arg)*)).unwrap();
     };
 }
 
 /// Logs a debug message.
 ///
-/// This macro should be used for detailed system information useful for debugging.
+/// Use this macro for detailed system information useful for debugging.
+/// The message will be logged at the `Debug` level.
 ///
 /// # Examples
 ///
 /// ```
-/// log_debug!(logger, "Debug info: {}", "Here's some detailed information");
+/// log_debug!("Debug info: {}", "Here's some detailed information");
 /// ```
 #[macro_export]
 macro_rules! log_debug {
-    ($logger:expr, $($arg:tt)*) => {
-        $logger.log(LogLevel::Debug, &format!($($arg)*)).unwrap();
+    ($($arg:tt)*) => {
+        $crate::logger::GLOBAL_LOGGER.lock().unwrap().log($crate::logger::LogLevel::Debug, &format!($($arg)*)).unwrap();
     };
 }
 
 /// Logs a trace message.
 ///
-/// This macro should be used for tracing the program flow, typically having the highest verbosity.
+/// Use this macro for tracing the program flow, typically having the highest verbosity.
+/// The message will be logged at the `Trace` level.
 ///
 /// # Examples
 ///
 /// ```
-/// log_trace!(logger, "Function trace: {}", "Entered function X");
+/// log_trace!("Function trace: {}", "Entered function X");
 /// ```
 #[macro_export]
 macro_rules! log_trace {
-    ($logger:expr, $($arg:tt)*) => {
-        $logger.log(LogLevel::Trace, &format!($($arg)*)).unwrap();
+    ($($arg:tt)*) => {
+        $crate::logger::GLOBAL_LOGGER.lock().unwrap().log($crate::logger::LogLevel::Trace, &format!($($arg)*)).unwrap();
     };
 }
