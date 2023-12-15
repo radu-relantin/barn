@@ -1,5 +1,6 @@
-this is a placeholder...
-
+<p align="center">
+  <img src="https://github.com/radu-relantin/barn/assets/150637455/d8d0ecb8-15b9-49d2-a05c-dc2e8a3e9803" width="600" height="600">
+</p>
 # Barn - Your Coding Sanctuary
 
 Welcome to **Barn**, an intuitive and versatile Integrated Development Environment (IDE) where your coding creativity can roam free. Just like a barn is a home for a variety of animals, **Barn** aims to be the go-to place for developers working with a multitude of languages and frameworks.
