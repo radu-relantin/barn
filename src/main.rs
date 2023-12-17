@@ -1,10 +1,33 @@
-mod tools;
+use crossterm::event::{Event, KeyCode, KeyEvent};
+use crossterm::{event, terminal};
+use std::time::Duration;
 
-use tools::logger::{LogLevel, Logger};
+struct CleanUp;
 
-fn main() {
-    let mut logger = Logger::new("app.log", LogLevel::Debug).unwrap();
+impl Drop for CleanUp {
+    fn drop(&mut self) {
+        terminal::disable_raw_mode().expect("Unable to disable raw mode")
+    }
+}
 
-    log_fatal!(logger, "Fatal error occurred: {}", "Out of memory");
-    log_error!(logger, "Error encountered: {}", "File not found");
+fn main() -> std::io::Result<()> {
+    let _clean_up = CleanUp;
+    terminal::enable_raw_mode()?;
+    loop {
+        if event::poll(Duration::from_millis(500))? {
+            if let Event::Key(event) = event::read()? {
+                match event {
+                    KeyEvent {
+                        code: KeyCode::Char('q'),
+                        ..
+                    } => break,
+                    _ => {}
+                }
+                println!("{:?}\r", event);
+            };
+        } else {
+            println!("No input yet\r");
+        }
+    }
+    Ok(())
 }
