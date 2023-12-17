@@ -49,6 +49,14 @@ impl Logger {
     /// let logger = Logger::new("app.log", LogLevel::Info).unwrap();
     /// ```
     pub fn new(file_path: &str, level: LogLevel) -> io::Result<Logger> {
+        // WARNING: This will delete the log file if it exists and is not empty.
+        //          This is done to ensure that the log file is always empty at the start of the program.
+        //          If you want to preserve the log file, remove this code.
+        let old_file = File::open(file_path)?;
+        if old_file.metadata()?.len() > 0 {
+            std::fs::remove_file(file_path)?;
+        }
+
         let file = OpenOptions::new()
             .create(true)
             .write(true)
