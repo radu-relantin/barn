@@ -1,6 +1,6 @@
 use crate::ports::terminal_io::{ReaderPort, WriterPort};
 use crossterm::{cursor, event, execute, terminal};
-use std::io::{self, stdout};
+use std::io::{self, stdout, Write};
 use std::time::Duration;
 
 /// Adapter for reading key events from the terminal.
@@ -36,29 +36,20 @@ impl ReaderPort for ReaderAdapter {
 pub struct WriterAdapter;
 
 impl WriterPort for WriterAdapter {
-    /// Clears the entire screen.
-    ///
-    /// This function uses `crossterm` to clear the terminal screen and
-    /// repositions the cursor to the top-left corner.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `io::Error` if an error occurs while executing the terminal commands.
     fn clear_screen(&self) -> io::Result<()> {
         execute!(stdout(), terminal::Clear(terminal::ClearType::All))?;
         execute!(stdout(), cursor::MoveTo(0, 0))
     }
 
-    /// Refreshes the terminal screen.
-    ///
-    /// Currently, this is implemented to simply clear the screen. In future,
-    /// it could be extended to include additional functionality like redrawing
-    /// screen elements.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `io::Error` if an error occurs during screen clearing.
-    fn refresh_screen(&self) -> io::Result<()> {
-        self.clear_screen()
+    fn draw_rows(&self, window_size: (usize, usize)) -> io::Result<()> {
+        let screen_rows = window_size.1;
+        for i in 0..screen_rows {
+            print!("~");
+            if i < screen_rows - 1 {
+                println!("\r")
+            }
+            stdout().flush()?;
+        }
+        Ok(())
     }
 }

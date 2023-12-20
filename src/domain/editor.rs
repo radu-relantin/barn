@@ -1,3 +1,6 @@
+use crossterm::terminal;
+use std::io;
+
 /// Represents the core business logic of the text editor.
 ///
 /// `EditorDomain` encapsulates the fundamental operations and state management
@@ -8,21 +11,16 @@
 ///
 /// As the application grows, this struct can be expanded with more methods
 /// and fields to support additional editing features.
-pub struct EditorDomain {}
+pub struct EditorDomain {
+    pub window_size: (usize, usize),
+}
 
 impl EditorDomain {
-    /// Constructs a new `EditorDomain`.
-    ///
-    /// Initializes the internal state of the editor. As the complexity of the
-    /// editor increases, this method can be extended to initialize more complex
-    /// state information.
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(window_size: (usize, usize)) -> Self {
+        Self { window_size }
     }
 
-    // Future methods for text editing operations would be added here.
-    // For example:
-    // fn insert_text(&mut self, position: usize, text: &str) { ... }
-    // fn delete_range(&mut self, range: Range<usize>) { ... }
-    // ...
+    pub fn get_window_size() -> io::Result<(usize, usize)> {
+        terminal::size().map(|(w, h)| (w as usize, h as usize))
+    }
 }
