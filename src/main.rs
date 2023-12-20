@@ -9,24 +9,57 @@ use crossterm::terminal;
 use ports::terminal_io::WriterPort;
 use std::io::Result;
 
+/// A utility struct responsible for cleaning up the application state
+/// when the main function exits, either normally or due to an error.
+///
+/// This includes tasks like clearing the screen and disabling raw mode
+/// for the terminal to ensure the terminal is left in a usable state.
 struct CleanUp;
 
 impl Drop for CleanUp {
+    /// The destructor method for `CleanUp`.
+    ///
+    /// This method is automatically called when `CleanUp` goes out of scope.
+    /// It performs necessary cleanup actions like clearing the terminal screen
+    /// and disabling raw mode.
     fn drop(&mut self) {
-        terminal_io::WriterAdapter.clear_screen().expect("Unable to clear screen");
         terminal::disable_raw_mode().expect("Unable to disable raw mode");
+        terminal_io::WriterAdapter
+            .clear_screen()
+            .expect("Unable to clear screen");
     }
 }
+
+/// The entry point for the text editor application.
+///
+/// This function sets up necessary components like the terminal I/O adapters
+/// and the main editor application (`EditorApp`). It then enters a loop
+/// where it continuously runs the editor until an exit condition is met.
+///
+/// # Errors
+///
+/// Returns an `io::Error` if there are issues with terminal I/O operations,
+/// such as enabling raw mode or during the main execution loop of the editor.
 fn main() -> Result<()> {
+    // Initialize the cleanup struct to ensure cleanup actions are taken
+    // when the program exits.
     let _clean_up = CleanUp;
+
+    // Enable raw mode for the terminal to handle keypresses and terminal output
+    // more directly.
     crossterm::terminal::enable_raw_mode()?;
 
+    // Initialize the terminal I/O adapters.
     let reader = terminal_io::ReaderAdapter;
     let writer = terminal_io::WriterAdapter;
+
+    // Create an instance of the main editor application, passing the I/O adapters.
     let editor = editor_app::EditorApp::new(reader, writer);
 
+    // Main execution loop of the editor. This loop continues running the editor
+    // until an exit condition (like pressing 'Ctrl+Q') is met.
     while editor.run()? {}
 
+    // If the loop exits without error, the program exits cleanly.
     Ok(())
 }
-
