@@ -5,8 +5,9 @@ mod ports;
 
 use adapters::terminal_io;
 use app::editor_app;
-use crossterm::terminal;
-use ports::terminal_io::WriterPort;
+use crossterm::{cursor, execute, terminal};
+use domain::editor;
+use std::io::stdout;
 use std::io::Result;
 
 /// A utility struct responsible for cleaning up the application state
@@ -24,9 +25,10 @@ impl Drop for CleanUp {
     /// and disabling raw mode.
     fn drop(&mut self) {
         terminal::disable_raw_mode().expect("Unable to disable raw mode");
-        terminal_io::WriterAdapter
-            .clear_screen()
-            .expect("Unable to clear screen");
+        execute!(stdout(), terminal::Clear(terminal::ClearType::All))
+            .expect("Unable to clear the screen");
+        execute!(stdout(), cursor::MoveTo(0, 0)) // Move cursor to top left corner
+            .expect("Unable to move cursor");
     }
 }
 
@@ -54,7 +56,11 @@ fn main() -> Result<()> {
     let writer = terminal_io::WriterAdapter;
 
     // Create an instance of the main editor application, passing the I/O adapters.
-    let editor = editor_app::EditorApp::new(reader, writer);
+    let mut editor: editor_app::EditorApp<
+        terminal_io::ReaderAdapter,
+        terminal_io::WriterAdapter,
+        editor::EditorDomain,
+    > = editor_app::EditorApp::new(reader, writer);
 
     // Main execution loop of the editor. This loop continues running the editor
     // until an exit condition (like pressing 'Ctrl+Q') is met.

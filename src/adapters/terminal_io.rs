@@ -1,6 +1,7 @@
-use crate::ports::terminal_io::{ReaderPort, WriterPort};
-use crossterm::{cursor, event, execute, terminal};
-use std::io::{self, stdout, Write};
+use crate::adapters::editor_buffer::EditorBuffer;
+use crate::ports::terminal_io::{CursorEventTypes, ReaderPort, WriterPort};
+use crossterm::{cursor, event, queue, terminal};
+use std::io::{self, Write};
 use std::time::Duration;
 
 /// Adapter for reading key events from the terminal.
@@ -29,6 +30,26 @@ impl ReaderPort for ReaderAdapter {
     }
 }
 
+macro_rules! queue_cursor_events {
+    ($buffer:expr, $events:expr) => {{
+        let mut res = Ok(());
+
+        for event in $events {
+            res = match event {
+                CursorEventTypes::MoveTo(x, y) => queue!($buffer, cursor::MoveTo(*x, *y)),
+                CursorEventTypes::Show => queue!($buffer, cursor::Show),
+                CursorEventTypes::Hide => queue!($buffer, cursor::Hide),
+                CursorEventTypes::None => continue, // Skip the None event
+            };
+
+            if res.is_err() {
+                break;
+            }
+        }
+
+        res
+    }};
+}
 /// Adapter for writing to the terminal.
 ///
 /// `WriterAdapter` implements `WriterPort` and provides functionality
@@ -36,20 +57,33 @@ impl ReaderPort for ReaderAdapter {
 pub struct WriterAdapter;
 
 impl WriterPort for WriterAdapter {
-    fn clear_screen(&self) -> io::Result<()> {
-        execute!(stdout(), terminal::Clear(terminal::ClearType::All))?;
-        execute!(stdout(), cursor::MoveTo(0, 0))
+    fn clear_screen(
+        &self,
+        buffer: &mut EditorBuffer,
+        clear_type: terminal::ClearType,
+    ) -> io::Result<()> {
+        queue!(buffer, cursor::Hide, terminal::Clear(clear_type))
     }
 
-    fn draw_rows(&self, window_size: (usize, usize)) -> io::Result<()> {
-        let screen_rows = window_size.1;
-        for i in 0..screen_rows {
-            print!("~");
-            if i < screen_rows - 1 {
-                println!("\r")
-            }
-            stdout().flush()?;
-        }
-        Ok(())
+    fn move_cursor(
+        &self,
+        buffer: &mut EditorBuffer,
+        cursor_events: &[CursorEventTypes],
+    ) -> io::Result<()> {
+        queue_cursor_events!(buffer, cursor_events)
+    }
+
+    fn flush(&self, buffer: &mut EditorBuffer) -> io::Result<()> {
+        buffer.flush()
+    }
+
+    // clear_type is an optional parameter with a defalt value of All.
+    fn reset_screen(
+        &self,
+        buffer: &mut EditorBuffer,
+        clear_type: Option<terminal::ClearType>,
+    ) -> io::Result<()> {
+        self.clear_screen(buffer, clear_type.unwrap_or(terminal::ClearType::All))?;
+        self.move_cursor(buffer, &[CursorEventTypes::MoveTo(0, 0)])
     }
 }

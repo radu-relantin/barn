@@ -1,5 +1,5 @@
-use crate::domain::editor;
-use crate::ports::terminal_io::{ReaderPort, WriterPort};
+use crate::ports::editor::EditorDomainPort;
+use crate::ports::terminal_io::{CursorEventTypes, ReaderPort, WriterPort};
 use crossterm::event;
 use std::io;
 
@@ -12,18 +12,18 @@ use std::io;
 /// Type parameters:
 /// - `R`: The type that implements the `ReaderPort` trait for reading input.
 /// - `W`: The type that implements the `WriterPort` trait for writing output.
-pub struct EditorApp<R: ReaderPort, W: WriterPort> {
+pub struct EditorApp<R: ReaderPort, W: WriterPort, E: EditorDomainPort> {
     reader: R,
     writer: W,
-    domain: editor::EditorDomain,
+    domain: E,
 }
 
-impl<R: ReaderPort, W: WriterPort> EditorApp<R, W> {
+impl<R: ReaderPort, W: WriterPort, E: EditorDomainPort> EditorApp<R, W, E> {
     pub fn new(reader: R, writer: W) -> Self {
         Self {
             reader,
             writer,
-            domain: editor::EditorDomain::new(editor::EditorDomain::get_window_size().unwrap()),
+            domain: E::new(E::get_window_size().unwrap()),
         }
     }
 
@@ -38,9 +38,18 @@ impl<R: ReaderPort, W: WriterPort> EditorApp<R, W> {
         }
     }
 
-    pub fn run(&self) -> io::Result<bool> {
-        self.writer.clear_screen().unwrap();
-        self.writer.draw_rows(self.domain.window_size).unwrap();
+    pub fn run(&mut self) -> io::Result<bool> {
+        self.writer
+            .reset_screen(self.domain.get_buffer(), None)
+            .unwrap();
+        self.domain.draw_rows().unwrap();
+        self.writer
+            .move_cursor(
+                self.domain.get_buffer(),
+                &[CursorEventTypes::MoveTo(0, 0), CursorEventTypes::Show],
+            )
+            .unwrap();
+        self.writer.flush(self.domain.get_buffer()).unwrap();
         self.process_keypress()
     }
 }

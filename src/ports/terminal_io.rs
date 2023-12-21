@@ -1,5 +1,14 @@
-use crossterm::event;
+use crate::adapters::editor_buffer::EditorBuffer;
+use crossterm::{event, terminal};
 use std::io;
+
+#[allow(dead_code)]
+pub enum CursorEventTypes {
+    Show,
+    Hide,
+    MoveTo(u16, u16),
+    None,
+}
 
 /// A trait defining the interface for reading key events from the terminal.
 ///
@@ -17,6 +26,20 @@ pub trait ReaderPort {
 /// clearing the screen. Different implementations (adapters) can provide different
 /// ways of handling terminal output, potentially using various backends or libraries.
 pub trait WriterPort {
-    fn clear_screen(&self) -> io::Result<()>;
-    fn draw_rows(&self, window_size: (usize, usize)) -> io::Result<()>;
+    fn clear_screen(
+        &self,
+        buffer: &mut EditorBuffer,
+        clear_type: terminal::ClearType,
+    ) -> io::Result<()>;
+    fn move_cursor(
+        &self,
+        buffer: &mut EditorBuffer,
+        cursor_events: &[CursorEventTypes],
+    ) -> io::Result<()>;
+    fn flush(&self, buffer: &mut EditorBuffer) -> io::Result<()>;
+    fn reset_screen(
+        &self,
+        buffer: &mut EditorBuffer,
+        clear_type: Option<terminal::ClearType>,
+    ) -> io::Result<()>;
 }
