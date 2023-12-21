@@ -37,8 +37,29 @@ impl EditorDomainPort for EditorDomain {
 
     fn draw_rows(&mut self) -> io::Result<()> {
         let screen_rows = self.window_size.1;
+        let screen_columns = self.window_size.0;
         for i in 0..screen_rows {
-            self.buffer.append_char('~');
+            if i == screen_rows / 3 {
+                // Draw a welcome message in the center of the screen
+                let mut welcome = format!("BARN Editor --- Version {}", env!("CARGO_PKG_VERSION"));
+                if welcome.len() > screen_columns {
+                    // truncate the welcome message if it's too long
+                    welcome.truncate(screen_columns)
+                }
+                // center the welcome message
+                let mut padding = (screen_columns - welcome.len()) / 2;
+                if padding != 0 {
+                    self.buffer.append_char('~');
+                    padding -= 1
+                }
+                // add padding
+                (0..padding).for_each(|_| self.buffer.append_char(' '));
+                // add the welcome message
+                self.buffer.append_str(&welcome);
+            } else {
+                // otherwise draw a tilde
+                self.buffer.append_char('~')
+            }
 
             queue!(
                 self.buffer,
