@@ -3,6 +3,7 @@ use crossterm::{event, terminal};
 use std::io;
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub enum CursorEventTypes {
     Show,
     Hide,

@@ -1,4 +1,5 @@
 use crate::adapters::editor_buffer::EditorBuffer;
+use crate::log_info;
 use crate::ports::terminal_io::{CursorEventTypes, ReaderPort, WriterPort};
 use crossterm::{cursor, event, queue, terminal};
 use std::io::{self, Write};
@@ -62,6 +63,7 @@ impl WriterPort for WriterAdapter {
         buffer: &mut EditorBuffer,
         clear_type: terminal::ClearType,
     ) -> io::Result<()> {
+        log_info!("Clearing screen, type: {:?}", clear_type);
         queue!(buffer, cursor::Hide, terminal::Clear(clear_type))
     }
 
@@ -70,10 +72,12 @@ impl WriterPort for WriterAdapter {
         buffer: &mut EditorBuffer,
         cursor_events: &[CursorEventTypes],
     ) -> io::Result<()> {
+        log_info!("Moving cursor, events: {:?}", cursor_events);
         queue_cursor_events!(buffer, cursor_events)
     }
 
     fn flush(&self, buffer: &mut EditorBuffer) -> io::Result<()> {
+        log_info!("Flushing buffer");
         buffer.flush()
     }
 
@@ -83,6 +87,7 @@ impl WriterPort for WriterAdapter {
         buffer: &mut EditorBuffer,
         clear_type: Option<terminal::ClearType>,
     ) -> io::Result<()> {
+        log_info!("Resetting screen, type: {:?}", clear_type);
         self.clear_screen(buffer, clear_type.unwrap_or(terminal::ClearType::All))?;
         self.move_cursor(buffer, &[CursorEventTypes::MoveTo(0, 0)])
     }

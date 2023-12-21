@@ -2,6 +2,7 @@ mod adapters;
 mod app;
 mod domain;
 mod ports;
+mod toolshed;
 
 use adapters::terminal_io;
 use app::editor_app;
@@ -9,6 +10,7 @@ use crossterm::{cursor, execute, terminal};
 use domain::editor;
 use std::io::stdout;
 use std::io::Result;
+use crate::toolshed::logger;
 
 /// A utility struct responsible for cleaning up the application state
 /// when the main function exits, either normally or due to an error.
@@ -24,6 +26,7 @@ impl Drop for CleanUp {
     /// It performs necessary cleanup actions like clearing the terminal screen
     /// and disabling raw mode.
     fn drop(&mut self) {
+        log_info!("Cleaning up application state");
         terminal::disable_raw_mode().expect("Unable to disable raw mode");
         execute!(stdout(), terminal::Clear(terminal::ClearType::All))
             .expect("Unable to clear the screen");
@@ -49,13 +52,16 @@ fn main() -> Result<()> {
 
     // Enable raw mode for the terminal to handle keypresses and terminal output
     // more directly.
+    log_info!("Enabling raw mode");
     crossterm::terminal::enable_raw_mode()?;
 
     // Initialize the terminal I/O adapters.
+    log_info!("Initializing terminal I/O adapters");
     let reader = terminal_io::ReaderAdapter;
     let writer = terminal_io::WriterAdapter;
 
     // Create an instance of the main editor application, passing the I/O adapters.
+    log_info!("Initializing editor application");
     let mut editor: editor_app::EditorApp<
         terminal_io::ReaderAdapter,
         terminal_io::WriterAdapter,
@@ -64,6 +70,7 @@ fn main() -> Result<()> {
 
     // Main execution loop of the editor. This loop continues running the editor
     // until an exit condition (like pressing 'Ctrl+Q') is met.
+    log_info!("Starting editor application");
     while editor.run()? {}
 
     // If the loop exits without error, the program exits cleanly.
