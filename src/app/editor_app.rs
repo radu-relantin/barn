@@ -56,11 +56,14 @@ impl<R: ReaderPort, W: WriterPort, E: EditorDomainPort> EditorApp<R, W, E> {
 
     pub fn run(&mut self) -> io::Result<bool> {
         let (cursor_x, cursor_y) = self.domain.get_cursor_position();
+        self.domain.scroll();
 
         self.writer
             .reset_screen(self.domain.get_buffer(), None)
             .unwrap();
+
         self.domain.draw_rows().unwrap();
+
         self.writer
             .cursor_event(
                 self.domain.get_buffer(),
@@ -70,7 +73,9 @@ impl<R: ReaderPort, W: WriterPort, E: EditorDomainPort> EditorApp<R, W, E> {
                 ],
             )
             .unwrap();
+
         self.writer.flush(self.domain.get_buffer()).unwrap();
+
         self.process_keypress()
     }
 }
