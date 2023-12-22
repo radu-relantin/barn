@@ -27,26 +27,56 @@ impl<R: ReaderPort, W: WriterPort, E: EditorDomainPort> EditorApp<R, W, E> {
         }
     }
 
-    fn process_keypress(&self) -> io::Result<bool> {
+    fn process_keypress(&mut self) -> io::Result<bool> {
         match self.reader.read_key()? {
             event::KeyEvent {
                 code: event::KeyCode::Char('q'),
                 modifiers: event::KeyModifiers::CONTROL,
                 ..
             } => Ok(false),
+            event::KeyEvent {
+                code:
+                    direction @ (event::KeyCode::Char('h')
+                    | event::KeyCode::Char('j')
+                    | event::KeyCode::Char('k')
+                    | event::KeyCode::Char('l')),
+                ..
+            } => {
+                self.domain.move_cursor(direction);
+                Ok(true)
+            }
+            event::KeyEvent {
+                code: val @ (event::KeyCode::PageUp | event::KeyCode::PageDown),
+                ..
+            } => {
+                (0..E::get_window_size().unwrap().1).for_each(|_| {
+                    self.domain
+                        .move_cursor(if matches!(val, event::KeyCode::PageUp) {
+                            event::KeyCode::Char('k')
+                        } else {
+                            event::KeyCode::Char('j')
+                        });
+                });
+                Ok(true)
+            }
             _ => Ok(true),
         }
     }
 
     pub fn run(&mut self) -> io::Result<bool> {
+        let (cursor_x, cursor_y) = self.domain.get_cursor_position();
+
         self.writer
             .reset_screen(self.domain.get_buffer(), None)
             .unwrap();
         self.domain.draw_rows().unwrap();
         self.writer
-            .move_cursor(
+            .cursor_event(
                 self.domain.get_buffer(),
-                &[CursorEventTypes::MoveTo(0, 0), CursorEventTypes::Show],
+                &[
+                    CursorEventTypes::MoveTo(cursor_x as u16, cursor_y as u16),
+                    CursorEventTypes::Show,
+                ],
             )
             .unwrap();
         self.writer.flush(self.domain.get_buffer()).unwrap();

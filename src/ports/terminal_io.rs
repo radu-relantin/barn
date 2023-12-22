@@ -32,7 +32,7 @@ pub trait WriterPort {
         buffer: &mut EditorBuffer,
         clear_type: terminal::ClearType,
     ) -> io::Result<()>;
-    fn move_cursor(
+    fn cursor_event(
         &self,
         buffer: &mut EditorBuffer,
         cursor_events: &[CursorEventTypes],

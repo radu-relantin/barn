@@ -1,7 +1,9 @@
 use crate::adapters::editor_buffer::EditorBuffer;
+use crate::ports::cursor::CursorControllerPort;
 use crate::ports::editor::EditorDomainPort;
 use crate::ports::editor_buffer::EditorBufferPort;
-use crossterm::{queue, terminal};
+use crate::{adapters::cursor::CursorController, log_info};
+use crossterm::{event, queue, terminal};
 use std::io::{self, stdout, Write};
 
 /// Represents the core business logic of the text editor.
@@ -17,13 +19,19 @@ use std::io::{self, stdout, Write};
 pub struct EditorDomain {
     window_size: (usize, usize),
     buffer: EditorBuffer,
+    cursor_controller: CursorController,
 }
 
 impl EditorDomainPort for EditorDomain {
     fn new(window_size: (usize, usize)) -> Self {
+        log_info!(
+            "Initializing editor domain with window size: {:?}",
+            window_size
+        );
         Self {
             window_size,
             buffer: EditorBuffer::new(),
+            cursor_controller: CursorController::new(window_size),
         }
     }
 
@@ -72,5 +80,21 @@ impl EditorDomainPort for EditorDomain {
             stdout().flush()?;
         }
         Ok(())
+    }
+
+    fn get_cursor_position(&self) -> (usize, usize) {
+        (
+            self.cursor_controller.cursor_x,
+            self.cursor_controller.cursor_y,
+        )
+    }
+
+    fn set_cursor_position(&mut self, x: usize, y: usize) {
+        self.cursor_controller.cursor_x = x;
+        self.cursor_controller.cursor_y = y;
+    }
+
+    fn move_cursor(&mut self, direction: event::KeyCode) {
+        self.cursor_controller.move_cursor(direction);
     }
 }
