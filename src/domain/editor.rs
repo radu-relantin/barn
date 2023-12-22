@@ -44,7 +44,7 @@ impl EditorDomainPort for EditorDomain {
         let screen_rows = self.window_size.1;
         let screen_columns = self.window_size.0;
         for i in 0..screen_rows {
-            if i >= self.editor_rows.number_of_rows() {
+            if self.editor_rows.number_of_rows() == 0 && i >= self.editor_rows.number_of_rows() {
                 if i == screen_rows / 3 {
                     // Draw a welcome message in the center of the screen
                     let mut welcome =
