@@ -1,6 +1,7 @@
 use crate::ports::editor_buffer::EditorBufferPort;
 use crossterm::{event, terminal};
 use std::io;
+use std::time;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -9,6 +10,11 @@ pub enum CursorEventTypes {
     Hide,
     MoveTo(u16, u16),
     None,
+}
+
+pub trait EventReader {
+    fn poll_event(&self, timeout: time::Duration) -> io::Result<bool>;
+    fn read_event(&self) -> io::Result<event::Event>;
 }
 
 pub trait ReaderPort {
