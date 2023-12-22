@@ -1,0 +1,5 @@
+[cursor_keymaps]
+down = "j"
+up = "k"
+left = "h"
+right = "l"

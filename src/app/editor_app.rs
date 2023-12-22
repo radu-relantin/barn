@@ -1,3 +1,4 @@
+use crate::ports::config;
 use crate::ports::editor::EditorDomainPort;
 use crate::ports::terminal_io::{CursorEventTypes, ReaderPort, WriterPort};
 use crossterm::event;
@@ -7,24 +8,29 @@ pub struct EditorApp<R: ReaderPort, W: WriterPort, E: EditorDomainPort> {
     reader: R,
     writer: W,
     domain: E,
+    config: config::Config,
 }
 
 impl<R: ReaderPort, W: WriterPort, E: EditorDomainPort> EditorApp<R, W, E> {
-    pub fn new(reader: R, writer: W) -> Self {
+    pub fn new(reader: R, writer: W, config: config::Config) -> Self {
         Self {
             reader,
             writer,
             domain: E::new(E::get_window_size().unwrap()),
+            config,
         }
     }
 
     fn process_keypress(&mut self) -> io::Result<bool> {
         match self.reader.read_key()? {
+            // Quit
             event::KeyEvent {
                 code: event::KeyCode::Char('q'),
                 modifiers: event::KeyModifiers::CONTROL,
                 ..
             } => Ok(false),
+
+            // Move cursor
             event::KeyEvent {
                 code:
                     direction @ (event::KeyCode::Char('h')
@@ -36,6 +42,8 @@ impl<R: ReaderPort, W: WriterPort, E: EditorDomainPort> EditorApp<R, W, E> {
                 self.domain.move_cursor(direction);
                 Ok(true)
             }
+
+            // Page up/down
             event::KeyEvent {
                 code: val @ (event::KeyCode::PageUp | event::KeyCode::PageDown),
                 ..

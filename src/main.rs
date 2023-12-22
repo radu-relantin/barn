@@ -4,13 +4,15 @@ mod domain;
 mod ports;
 mod toolshed;
 
+use crate::adapters::terminal_io::CrosstermEventReader;
 use crate::toolshed::logger;
 use adapters::terminal_io;
 use app::editor_app;
 use crossterm::{cursor, execute, terminal};
 use domain::editor;
+use ports::config::read_config;
 use std::io::stdout;
-use std::io::Result;
+use std::io::Result as IoResult;
 
 /// A utility struct responsible for cleaning up the application state
 /// when the main function exits, either normally or due to an error.
@@ -45,7 +47,7 @@ impl Drop for CleanUp {
 ///
 /// Returns an `io::Error` if there are issues with terminal I/O operations,
 /// such as enabling raw mode or during the main execution loop of the editor.
-fn main() -> Result<()> {
+fn main() -> IoResult<()> {
     // Initialize the cleanup struct to ensure cleanup actions are taken
     // when the program exits.
     let _clean_up = CleanUp;
@@ -55,16 +57,20 @@ fn main() -> Result<()> {
     log_info!("Enabling raw mode (Zap! Pow! Bang! and there goes the keyboard)");
     crossterm::terminal::enable_raw_mode()?;
 
+    let config = read_config("./config.toml").unwrap();
+    log_info!("Config: {:?}", config);
+
     // Initialize the terminal I/O adapters.
-    let reader = terminal_io::ReaderAdapter;
+    let event_reader = CrosstermEventReader;
+    let reader = terminal_io::ReaderAdapter::new(event_reader);
     let writer = terminal_io::WriterAdapter;
 
     // Create an instance of the main editor application, passing the I/O adapters.
     let mut editor: editor_app::EditorApp<
-        terminal_io::ReaderAdapter,
+        terminal_io::ReaderAdapter<CrosstermEventReader>,
         terminal_io::WriterAdapter,
         editor::EditorDomain,
-    > = editor_app::EditorApp::new(reader, writer);
+    > = editor_app::EditorApp::new(reader, writer, config);
 
     // Main execution loop of the editor. This loop continues running the editor
     // until an exit condition (like pressing 'Ctrl+Q') is met.
