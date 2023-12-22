@@ -3,5 +3,5 @@ pub trait EditorRowsPort {
     where
         Self: Sized;
     fn number_of_rows(&self) -> usize;
-    fn get_row(&self) -> &str;
+    fn get_row(&self, at: usize) -> &str;
 }

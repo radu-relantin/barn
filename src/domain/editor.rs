@@ -69,9 +69,9 @@ impl EditorDomainPort for EditorDomain {
                 }
             } else {
                 // len is the minimum of the length of the row and the screen width
-                let len = cmp::min(self.editor_rows.get_row().len(), screen_columns);
+                let len = cmp::min(self.editor_rows.get_row(i).len(), screen_columns);
                 // draw the row
-                self.buffer.append_str(&self.editor_rows.get_row()[..len])
+                self.buffer.append_str(&self.editor_rows.get_row(i)[..len])
             }
             queue!(
                 self.buffer,
