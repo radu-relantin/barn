@@ -34,6 +34,12 @@ impl Drop for CleanUp {
             .expect("Unable to move cursor");
     }
 }
+struct CursorController {
+    cursor_x: usize,
+    cursor_y: usize,
+    screen_columns: usize,
+    screen_rows: usize,
+}
 
 /// The entry point for the text editor application.
 ///
