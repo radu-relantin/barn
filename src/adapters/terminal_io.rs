@@ -1,5 +1,5 @@
-use crate::adapters::editor_buffer::EditorBuffer;
 use crate::log_info;
+use crate::ports::editor_buffer::EditorBufferPort;
 use crate::ports::terminal_io::{CursorEventTypes, ReaderPort, WriterPort};
 use crossterm::{cursor, event, queue, terminal};
 use std::io::{self, Write};
@@ -37,9 +37,9 @@ macro_rules! queue_cursor_events {
 
         for event in $events {
             res = match event {
-                CursorEventTypes::MoveTo(x, y) => queue!($buffer, cursor::MoveTo(*x, *y)),
-                CursorEventTypes::Show => queue!($buffer, cursor::Show),
-                CursorEventTypes::Hide => queue!($buffer, cursor::Hide),
+                CursorEventTypes::MoveTo(x, y) => $buffer.move_cursor_to(*x, *y),
+                CursorEventTypes::Show => $buffer.show_cursor(),
+                CursorEventTypes::Hide => $buffer.hide_cursor(),
                 CursorEventTypes::None => continue, // Skip the None event
             };
 
@@ -60,23 +60,24 @@ pub struct WriterAdapter;
 impl WriterPort for WriterAdapter {
     fn clear_screen(
         &self,
-        buffer: &mut EditorBuffer,
+        buffer: &mut dyn EditorBufferPort,
         clear_type: terminal::ClearType,
     ) -> io::Result<()> {
         log_info!("Clearing screen, type: {:?}", clear_type);
-        queue!(buffer, cursor::Hide, terminal::Clear(clear_type))
+        buffer.hide_cursor()?;
+        buffer.clear_screen(clear_type)
     }
 
     fn cursor_event(
         &self,
-        buffer: &mut EditorBuffer,
+        buffer: &mut dyn EditorBufferPort,
         cursor_events: &[CursorEventTypes],
     ) -> io::Result<()> {
         log_info!("Moving cursor, events: {:?}", cursor_events);
         queue_cursor_events!(buffer, cursor_events)
     }
 
-    fn flush(&self, buffer: &mut EditorBuffer) -> io::Result<()> {
+    fn flush(&self, buffer: &mut dyn EditorBufferPort) -> io::Result<()> {
         log_info!("Flushing buffer");
         buffer.flush()
     }
@@ -84,7 +85,7 @@ impl WriterPort for WriterAdapter {
     // clear_type is an optional parameter with a defalt value of All.
     fn reset_screen(
         &self,
-        buffer: &mut EditorBuffer,
+        buffer: &mut dyn EditorBufferPort,
         clear_type: Option<terminal::ClearType>,
     ) -> io::Result<()> {
         log_info!("Resetting screen, type: {:?}", clear_type);

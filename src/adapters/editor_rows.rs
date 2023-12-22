@@ -1,6 +1,6 @@
 use crate::ports::editor_rows::EditorRowsPort;
 
-struct EditorRows {
+pub struct EditorRows {
     row_contents: Vec<String>,
 }
 
@@ -12,7 +12,7 @@ impl EditorRowsPort for EditorRows {
     }
 
     fn number_of_rows(&self) -> usize {
-        1
+        self.row_contents.len()
     }
 
     fn get_row(&self) -> &str {

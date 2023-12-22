@@ -1,4 +1,4 @@
-use crate::adapters::editor_buffer::EditorBuffer;
+use crate::ports::editor_buffer::EditorBufferPort;
 use crossterm::{event, terminal};
 use std::io;
 
@@ -26,21 +26,23 @@ pub trait ReaderPort {
 /// This trait abstracts the functionality for terminal output operations such as
 /// clearing the screen. Different implementations (adapters) can provide different
 /// ways of handling terminal output, potentially using various backends or libraries.
+
 pub trait WriterPort {
+    // Change the buffer parameter type to a trait object
     fn clear_screen(
         &self,
-        buffer: &mut EditorBuffer,
+        buffer: &mut dyn EditorBufferPort,
         clear_type: terminal::ClearType,
+    ) -> io::Result<()>;
+    fn reset_screen(
+        &self,
+        buffer: &mut dyn EditorBufferPort,
+        clear_type: Option<terminal::ClearType>,
     ) -> io::Result<()>;
     fn cursor_event(
         &self,
-        buffer: &mut EditorBuffer,
+        buffer: &mut dyn EditorBufferPort,
         cursor_events: &[CursorEventTypes],
     ) -> io::Result<()>;
-    fn flush(&self, buffer: &mut EditorBuffer) -> io::Result<()>;
-    fn reset_screen(
-        &self,
-        buffer: &mut EditorBuffer,
-        clear_type: Option<terminal::ClearType>,
-    ) -> io::Result<()>;
+    fn flush(&self, buffer: &mut dyn EditorBufferPort) -> io::Result<()>;
 }

@@ -1,6 +1,6 @@
 use crate::ports::editor_buffer::EditorBufferPort;
+use crossterm::{cursor, queue, terminal};
 use std::io::{self, stdout};
-
 /// Represents the buffer holding the contents to be displayed in the editor.
 pub struct EditorBuffer {
     buffer: String,
@@ -22,6 +22,22 @@ impl EditorBufferPort for EditorBuffer {
     /// Appends a string to the editor buffer.
     fn append_str(&mut self, str: &str) {
         self.buffer.push_str(str)
+    }
+
+    fn hide_cursor(&mut self) -> io::Result<()> {
+        queue!(self, cursor::Hide)
+    }
+
+    fn clear_screen(&mut self, clear_type: terminal::ClearType) -> io::Result<()> {
+        queue!(self, terminal::Clear(clear_type))
+    }
+
+    fn move_cursor_to(&mut self, x: u16, y: u16) -> io::Result<()> {
+        queue!(self, cursor::MoveTo(x, y))
+    }
+
+    fn show_cursor(&mut self) -> io::Result<()> {
+        queue!(self, cursor::Show)
     }
 }
 

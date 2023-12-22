@@ -42,4 +42,13 @@ impl CursorControllerPort for CursorController {
             _ => unimplemented!(),
         }
     }
+
+    fn get_cursor_position(&self) -> (usize, usize) {
+        (self.cursor_x, self.cursor_y)
+    }
+
+    fn set_cursor_position(&mut self, x: usize, y: usize) {
+        self.cursor_x = x;
+        self.cursor_y = y;
+    }
 }
