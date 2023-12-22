@@ -67,7 +67,7 @@ impl WriterPort for WriterAdapter {
         queue!(buffer, cursor::Hide, terminal::Clear(clear_type))
     }
 
-    fn move_cursor(
+    fn cursor_event(
         &self,
         buffer: &mut EditorBuffer,
         cursor_events: &[CursorEventTypes],
@@ -89,6 +89,6 @@ impl WriterPort for WriterAdapter {
     ) -> io::Result<()> {
         log_info!("Resetting screen, type: {:?}", clear_type);
         self.clear_screen(buffer, clear_type.unwrap_or(terminal::ClearType::All))?;
-        self.move_cursor(buffer, &[CursorEventTypes::MoveTo(0, 0)])
+        self.cursor_event(buffer, &[CursorEventTypes::MoveTo(0, 0)])
     }
 }
