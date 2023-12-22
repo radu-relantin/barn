@@ -6,7 +6,6 @@ use toml;
 pub struct Config {
     pub cursor_keymaps: CursorKeyMapsConfig,
 }
-
 #[derive(Deserialize, Debug)]
 pub struct CursorKeyMapsConfig {
     pub down: char,

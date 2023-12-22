@@ -4,6 +4,7 @@ use crate::ports::terminal_io::{CursorEventTypes, ReaderPort, WriterPort};
 use crossterm::event;
 use std::io;
 
+#[warn(dead_code)]
 pub struct EditorApp<R: ReaderPort, W: WriterPort, E: EditorDomainPort> {
     reader: R,
     writer: W,
