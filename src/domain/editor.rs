@@ -61,7 +61,7 @@ impl EditorDomainPort for EditorDomain {
                     self.buffer.append_char('~')
                 }
             } else {
-                let row = self.editor_rows.get_row(file_row);
+                let row = self.editor_rows.get_render(file_row);
                 let col_offset = self.cursor_controller.get_col_offset();
                 let len = cmp::min(row.len().saturating_sub(col_offset), screen_columns);
                 let start = if len == 0 { 0 } else { col_offset };

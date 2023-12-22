@@ -14,6 +14,8 @@ pub struct CursorController {
 
     pub row_offset: usize,
     pub col_offset: usize,
+
+    pub render_x: usize,
 }
 
 impl CursorControllerPort for CursorController {
@@ -25,6 +27,7 @@ impl CursorControllerPort for CursorController {
             screen_rows: window_size.1,
             row_offset: 0,
             col_offset: 0,
+            render_x: 0,
         }
     }
 
@@ -104,4 +107,17 @@ impl CursorControllerPort for CursorController {
             self.col_offset = self.cursor_x - self.screen_cols + 1;
         }
     }
+
+    // FIXME: Future me... please fix this mess...
+    // fn get_render_x(&self, row: &Row) -> usize {
+    //     row.row_content[..self.cursor_x]
+    //         .chars()
+    //         .fold(0, |render_x, c| {
+    //             if c == '\t' {
+    //                 render_x + (TAB_STOP - 1) - (render_x % TAB_STOP) + 1
+    //             } else {
+    //                 render_x + 1
+    //             }
+    //         })
+    // }
 }
