@@ -1,33 +1,54 @@
+//! `terminal_io.rs`
+//!
+//! This module provides adapters for terminal I/O operations in the `barn` text editor.
+//! It follows the hexagonal architecture pattern, separating the application logic
+//! (in the domain and application layers) from external concerns like terminal I/O.
+//!
+//! The module consists of two primary adapters:
+//! - `ReaderAdapter`: For reading user inputs (like keypresses) from the terminal.
+//! - `WriterAdapter`: For writing outputs (like text and cursor movements) to the terminal.
+//!
+//! Additionally, it includes an `EventReader` trait that abstracts the details of event
+//! polling and reading, allowing for easier testing and future extensions.
+
 use crate::ports::editor_buffer::EditorBufferPort;
 use crate::ports::terminal_io::{CursorEventTypes, EventReader, ReaderPort, WriterPort};
 use crossterm::{event, terminal};
-use std::io::{self};
+use std::io;
 use std::time::Duration;
 
+/// `CrosstermEventReader` is an implementation of `EventReader` using `crossterm`.
+/// It provides the functionality to poll and read terminal events.
 pub struct CrosstermEventReader;
 
 impl EventReader for CrosstermEventReader {
+    /// Polls for an event within a given timeout.
     fn poll_event(&self, timeout: Duration) -> io::Result<bool> {
         event::poll(timeout)
     }
 
+    /// Reads an event from the terminal.
     fn read_event(&self) -> io::Result<event::Event> {
         event::read()
     }
 }
 
+/// `ReaderAdapter` provides an interface for reading key events from the terminal.
+/// It utilizes an `EventReader` to abstract the specifics of event polling and reading.
 pub struct ReaderAdapter<E: EventReader> {
     event_reader: E,
 }
 
 impl<E: EventReader> ReaderAdapter<E> {
-    // This method is an associated function of ReaderAdapter and is not part of ReaderPort trait
+    /// Constructs a new `ReaderAdapter` with the given `EventReader`.
     pub fn new(event_reader: E) -> ReaderAdapter<E> {
         ReaderAdapter { event_reader }
     }
 }
 
 impl<E: EventReader> ReaderPort for ReaderAdapter<E> {
+    /// Reads a key event from the terminal.
+    /// Continuously polls for an event and returns the first key event detected.
     fn read_key(&self) -> io::Result<event::KeyEvent> {
         loop {
             if self.event_reader.poll_event(Duration::from_millis(500))? {
@@ -39,6 +60,7 @@ impl<E: EventReader> ReaderPort for ReaderAdapter<E> {
     }
 }
 
+/// Macro to queue a series of cursor events into a given `EditorBufferPort`.
 macro_rules! queue_cursor_events {
     ($buffer:expr, $events:expr) => {{
         let mut res = Ok(());
@@ -60,9 +82,12 @@ macro_rules! queue_cursor_events {
     }};
 }
 
+/// `WriterAdapter` provides an interface for writing outputs (like text and cursor movements)
+/// to the terminal. It uses `EditorBufferPort` to abstract the actual writing process.
 pub struct WriterAdapter;
 
 impl WriterPort for WriterAdapter {
+    /// Clears the screen with the specified clear type.
     fn clear_screen(
         &self,
         buffer: &mut dyn EditorBufferPort,
@@ -72,6 +97,7 @@ impl WriterPort for WriterAdapter {
         buffer.clear_screen(clear_type)
     }
 
+    /// Handles a sequence of cursor events, queuing them into the buffer.
     fn cursor_event(
         &self,
         buffer: &mut dyn EditorBufferPort,
@@ -80,11 +106,13 @@ impl WriterPort for WriterAdapter {
         queue_cursor_events!(buffer, cursor_events)
     }
 
+    /// Flushes the buffer, writing all queued content to the terminal.
     fn flush(&self, buffer: &mut dyn EditorBufferPort) -> io::Result<()> {
         buffer.flush()
     }
 
-    // clear_type is an optional parameter with a defalt value of All.
+    /// Resets the screen to a clear state, optionally with a specified clear type.
+    /// Defaults to clearing the entire screen.
     fn reset_screen(
         &self,
         buffer: &mut dyn EditorBufferPort,
@@ -95,40 +123,47 @@ impl WriterPort for WriterAdapter {
     }
 }
 
-#[cfg(test)]
-pub struct MockEventReader {
-    events: std::cell::RefCell<Vec<io::Result<event::Event>>>,
-}
+// ============================================================================
+// ============================ 🧨 TEST SECTION 🧨 ============================
+// ============================================================================
 
-#[cfg(test)]
-impl MockEventReader {
-    pub fn new(events: Vec<io::Result<event::Event>>) -> Self {
-        Self {
-            events: std::cell::RefCell::new(events),
-        }
-    }
-}
-
-#[cfg(test)]
-impl EventReader for MockEventReader {
-    fn poll_event(&self, _timeout: Duration) -> io::Result<bool> {
-        Ok(!self.events.borrow().is_empty())
-    }
-
-    fn read_event(&self) -> io::Result<event::Event> {
-        self.events
-            .borrow_mut()
-            .pop()
-            .unwrap_or(Ok(event::Event::Key(event::KeyEvent::new(
-                event::KeyCode::Null,
-                event::KeyModifiers::NONE,
-            ))))
-    }
-}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ports::terminal_io::{CursorEventTypes, EventReader, ReaderPort, WriterPort};
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use crossterm::terminal::ClearType;
+    use std::cell::RefCell;
+    use std::io::{self};
+    use std::time::Duration;
+
+    pub struct MockEventReader {
+        events: RefCell<Vec<io::Result<event::Event>>>,
+    }
+
+    impl MockEventReader {
+        pub fn new(events: Vec<io::Result<event::Event>>) -> Self {
+            Self {
+                events: RefCell::new(events),
+            }
+        }
+    }
+
+    impl EventReader for MockEventReader {
+        fn poll_event(&self, _timeout: Duration) -> io::Result<bool> {
+            Ok(!self.events.borrow().is_empty())
+        }
+
+        fn read_event(&self) -> io::Result<event::Event> {
+            self.events
+                .borrow_mut()
+                .pop()
+                .unwrap_or(Ok(event::Event::Key(KeyEvent::new(
+                    KeyCode::Null,
+                    KeyModifiers::NONE,
+                ))))
+        }
+    }
 
     #[test]
     fn test_read_key() {
@@ -144,5 +179,127 @@ mod tests {
             key_event,
             KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE)
         );
+    }
+
+    #[cfg(test)]
+    struct MockEditorBuffer {
+        content: RefCell<String>,
+        cursor_pos: RefCell<(u16, u16)>,
+        is_cursor_hidden: RefCell<bool>,
+    }
+
+    #[cfg(test)]
+    impl MockEditorBuffer {
+        fn new() -> Self {
+            Self {
+                content: RefCell::new(String::new()),
+                cursor_pos: RefCell::new((0, 0)),
+                is_cursor_hidden: RefCell::new(false),
+            }
+        }
+
+        fn is_content_empty(&self) -> bool {
+            self.content.borrow().is_empty()
+        }
+
+        fn is_cursor_at(&self, x: u16, y: u16) -> bool {
+            *self.cursor_pos.borrow() == (x, y)
+        }
+    }
+
+    #[cfg(test)]
+    impl io::Write for MockEditorBuffer {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            let string = String::from_utf8_lossy(buf);
+            self.content.borrow_mut().push_str(&string);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[cfg(test)]
+    impl EditorBufferPort for MockEditorBuffer {
+        fn new() -> Self {
+            Self::new()
+        }
+
+        fn append_char(&mut self, ch: char) {
+            self.content.borrow_mut().push(ch);
+        }
+
+        fn append_str(&mut self, str: &str) {
+            self.content.borrow_mut().push_str(str);
+        }
+
+        fn hide_cursor(&mut self) -> io::Result<()> {
+            *self.is_cursor_hidden.borrow_mut() = true;
+            Ok(())
+        }
+
+        fn clear_screen(&mut self, clear_type: terminal::ClearType) -> io::Result<()> {
+            match clear_type {
+                terminal::ClearType::All => self.content.borrow_mut().clear(),
+                _ => {}
+            }
+            Ok(())
+        }
+
+        fn move_cursor_to(&mut self, x: u16, y: u16) -> io::Result<()> {
+            *self.cursor_pos.borrow_mut() = (x, y);
+            Ok(())
+        }
+
+        fn show_cursor(&mut self) -> io::Result<()> {
+            *self.is_cursor_hidden.borrow_mut() = false;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_clear_screen() {
+        let mut buffer = MockEditorBuffer::new();
+        buffer.content.borrow_mut().push_str("Some content");
+        assert!(!buffer.is_content_empty());
+
+        let writer = WriterAdapter;
+        writer.clear_screen(&mut buffer, ClearType::All).unwrap();
+        assert!(buffer.is_content_empty());
+    }
+
+    #[test]
+    fn test_cursor_event() {
+        let mut buffer = MockEditorBuffer::new();
+        assert!(!buffer.is_cursor_at(5, 5));
+
+        let writer = WriterAdapter;
+        writer
+            .cursor_event(&mut buffer, &[CursorEventTypes::MoveTo(5, 5)])
+            .unwrap();
+        assert!(buffer.is_cursor_at(5, 5));
+    }
+
+    #[test]
+    fn test_flush() {
+        let mut buffer = MockEditorBuffer::new();
+        buffer.content.borrow_mut().push_str("Changed");
+
+        let writer = WriterAdapter;
+        assert!(writer.flush(&mut buffer).is_ok());
+        // Additional checks can be added here if needed
+    }
+
+    #[test]
+    fn test_reset_screen() {
+        let mut buffer = MockEditorBuffer::new();
+        buffer.content.borrow_mut().push_str("Content to clear");
+        assert!(!buffer.is_content_empty());
+
+        let writer = WriterAdapter;
+        writer.reset_screen(&mut buffer, None).unwrap();
+        assert!(buffer.is_content_empty());
+        assert!(buffer.is_cursor_at(0, 0));
     }
 }
