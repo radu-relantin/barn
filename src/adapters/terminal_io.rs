@@ -1,25 +1,13 @@
 use crate::log_info;
 use crate::ports::editor_buffer::EditorBufferPort;
 use crate::ports::terminal_io::{CursorEventTypes, ReaderPort, WriterPort};
-use crossterm::{cursor, event, queue, terminal};
-use std::io::{self, Write};
+use crossterm::{event, terminal};
+use std::io::{self};
 use std::time::Duration;
 
-/// Adapter for reading key events from the terminal.
-///
-/// `ReaderAdapter` implements `ReaderPort` and provides functionality
-/// for reading key events from the terminal using the `crossterm` crate.
 pub struct ReaderAdapter;
 
 impl ReaderPort for ReaderAdapter {
-    /// Reads a key event from the terminal.
-    ///
-    /// This function blocks until a key event is available or the specified
-    /// timeout (500ms) is reached. It returns a `KeyEvent` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `io::Error` if an error occurs while polling or reading the event.
     fn read_key(&self) -> io::Result<event::KeyEvent> {
         loop {
             if event::poll(Duration::from_millis(500))? {
@@ -51,10 +39,6 @@ macro_rules! queue_cursor_events {
         res
     }};
 }
-/// Adapter for writing to the terminal.
-///
-/// `WriterAdapter` implements `WriterPort` and provides functionality
-/// for writing to the terminal, such as clearing the screen.
 pub struct WriterAdapter;
 
 impl WriterPort for WriterAdapter {

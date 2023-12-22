@@ -3,15 +3,6 @@ use crate::ports::terminal_io::{CursorEventTypes, ReaderPort, WriterPort};
 use crossterm::event;
 use std::io;
 
-/// Represents the application layer of the text editor.
-///
-/// `EditorApp` orchestrates the interaction between the input/output operations
-/// (handled by ReaderPort and WriterPort) and the core business logic of the editor
-/// (encapsulated in EditorDomain).
-///
-/// Type parameters:
-/// - `R`: The type that implements the `ReaderPort` trait for reading input.
-/// - `W`: The type that implements the `WriterPort` trait for writing output.
 pub struct EditorApp<R: ReaderPort, W: WriterPort, E: EditorDomainPort> {
     reader: R,
     writer: W,

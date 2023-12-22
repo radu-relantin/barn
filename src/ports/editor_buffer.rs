@@ -1,7 +1,7 @@
 use crossterm::terminal;
 use std::io;
 
-pub trait EditorBufferPort: std::io::Write {
+pub trait EditorBufferPort: io::Write {
     fn new() -> Self
     where
         Self: Sized;
