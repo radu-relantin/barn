@@ -84,7 +84,7 @@ impl EditorDomainPort for EditorDomain {
         &mut *self.buffer
     }
 
-    fn get_window_size() -> io::Result<(usize, usize)> {
+    fn get_window_size(&self) -> io::Result<(usize, usize)> {
         terminal::size().map(|(w, h)| (w as usize, h as usize))
     }
 
@@ -103,5 +103,13 @@ impl EditorDomainPort for EditorDomain {
 
     fn scroll(&mut self) {
         self.cursor_controller.scroll(&*self.editor_rows);
+    }
+
+    fn get_cursor_controller(&mut self) -> &mut dyn CursorControllerPort {
+        &mut *self.cursor_controller
+    }
+
+    fn get_editor_rows(&mut self) -> &mut dyn EditorRowsPort {
+        &mut *self.editor_rows
     }
 }

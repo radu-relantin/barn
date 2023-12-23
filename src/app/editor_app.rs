@@ -2,7 +2,7 @@ use crate::ports::config;
 use crate::ports::editor::EditorDomainPort;
 use crate::ports::terminal_io::{CursorEventTypes, ReaderPort, WriterPort};
 use crossterm::event;
-use std::io;
+use std::{cmp, io};
 
 #[warn(dead_code)]
 pub struct EditorApp<R: ReaderPort, W: WriterPort, E: EditorDomainPort> {
@@ -49,7 +49,18 @@ impl<R: ReaderPort, W: WriterPort, E: EditorDomainPort> EditorApp<R, W, E> {
                 code: val @ (event::KeyCode::PageUp | event::KeyCode::PageDown),
                 ..
             } => {
-                (0..E::get_window_size().unwrap().1).for_each(|_| {
+                if matches!(val, event::KeyCode::PageUp) {
+                    self.domain.get_cursor_controller().get_cursor_position().1 =
+                        self.domain.get_cursor_controller().get_row_offset()
+                } else {
+                    self.domain.get_cursor_controller().get_cursor_position().1 = cmp::min(
+                        self.domain.get_cursor_controller().get_row_offset()
+                            + self.domain.get_window_size().unwrap().1
+                            - 1,
+                        self.domain.get_editor_rows().number_of_rows(),
+                    );
+                }
+                (0..self.domain.get_window_size().unwrap().1).for_each(|_| {
                     self.domain
                         .move_cursor(if matches!(val, event::KeyCode::PageUp) {
                             event::KeyCode::Char('k')
