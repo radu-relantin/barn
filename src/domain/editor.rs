@@ -102,6 +102,6 @@ impl EditorDomainPort for EditorDomain {
     }
 
     fn scroll(&mut self) {
-        self.cursor_controller.scroll();
+        self.cursor_controller.scroll(&*self.editor_rows);
     }
 }

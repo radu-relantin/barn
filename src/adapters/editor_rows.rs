@@ -2,7 +2,7 @@ use crate::ports::editor_rows::EditorRowsPort;
 use crate::ports::editor_rows::RowPort;
 use std::{env, fs, path, rc::Rc};
 
-const TAB_STOP: usize = 8;
+pub const TAB_STOP: usize = 8;
 
 pub struct Row {
     row_content: Box<str>,
@@ -88,7 +88,7 @@ impl EditorRowsPort for EditorRows {
         let capacity = row
             .row_content
             .chars()
-            .fold(0, |acc, next| acc + if next == '\t' { 8 } else { 1 });
+            .fold(0, |acc, next| acc + if next == '\t' { TAB_STOP } else { 1 });
         row.render = String::with_capacity(capacity);
         row.row_content.chars().for_each(|c| {
             index += 1;

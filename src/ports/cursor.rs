@@ -1,4 +1,5 @@
 use crate::ports::editor_rows::EditorRowsPort;
+use crate::ports::editor_rows::RowPort;
 use crossterm::event::KeyCode;
 
 pub trait CursorControllerPort {
@@ -10,5 +11,6 @@ pub trait CursorControllerPort {
     fn set_cursor_position(&mut self, x: usize, y: usize);
     fn get_row_offset(&self) -> usize;
     fn get_col_offset(&self) -> usize;
-    fn scroll(&mut self);
+    fn scroll(&mut self, editor_rows: &dyn EditorRowsPort);
+    fn get_render_x(&self, row: &dyn RowPort) -> usize;
 }

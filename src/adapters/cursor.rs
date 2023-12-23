@@ -1,6 +1,7 @@
+use crate::adapters::editor_rows::TAB_STOP;
 use crate::ports::cursor::CursorControllerPort;
 use crate::ports::editor_rows::EditorRowsPort;
-
+use crate::ports::editor_rows::RowPort;
 use crossterm::event::KeyCode;
 
 use std::cmp;
@@ -78,7 +79,7 @@ impl CursorControllerPort for CursorController {
 
     fn get_cursor_position(&self) -> (usize, usize) {
         (
-            self.cursor_x - self.col_offset,
+            self.render_x - self.col_offset,
             self.cursor_y - self.row_offset,
         )
     }
@@ -96,28 +97,32 @@ impl CursorControllerPort for CursorController {
         self.col_offset
     }
 
-    fn scroll(&mut self) {
+    fn get_render_x(&self, row: &dyn RowPort) -> usize {
+        row.get_content()[..self.cursor_x]
+            .chars()
+            .fold(0, |render_x, c| {
+                if c == '\t' {
+                    render_x + (TAB_STOP - 1) - (render_x % TAB_STOP) + 1
+                } else {
+                    render_x + 1
+                }
+            })
+    }
+
+    fn scroll(&mut self, editor_rows: &dyn EditorRowsPort) {
+        self.render_x = 0;
+        if self.cursor_y < editor_rows.number_of_rows() {
+            self.render_x = self.get_render_x(editor_rows.get_editor_row(self.cursor_y))
+        }
+
         self.row_offset = cmp::min(self.row_offset, self.cursor_y);
         if self.cursor_y >= self.row_offset + self.screen_rows {
             self.row_offset = self.cursor_y - self.screen_rows + 1;
         }
 
-        self.col_offset = cmp::min(self.col_offset, self.cursor_x);
-        if self.cursor_x >= self.col_offset + self.screen_cols {
-            self.col_offset = self.cursor_x - self.screen_cols + 1;
+        self.col_offset = cmp::min(self.col_offset, self.render_x);
+        if self.render_x >= self.col_offset + self.screen_cols {
+            self.col_offset = self.render_x - self.screen_cols + 1;
         }
     }
-
-    // FIXME: Future me... please fix this mess...
-    // fn get_render_x(&self, row: &Row) -> usize {
-    //     row.row_content[..self.cursor_x]
-    //         .chars()
-    //         .fold(0, |render_x, c| {
-    //             if c == '\t' {
-    //                 render_x + (TAB_STOP - 1) - (render_x % TAB_STOP) + 1
-    //             } else {
-    //                 render_x + 1
-    //             }
-    //         })
-    // }
 }
