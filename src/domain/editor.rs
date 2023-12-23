@@ -1,12 +1,14 @@
 use crate::adapters::editor_buffer::EditorBuffer;
 use crate::adapters::editor_rows::EditorRows;
+use crate::adapters::status_message::StatusMessage;
 use crate::ports::cursor::CursorControllerPort;
 use crate::ports::editor::EditorDomainPort;
 use crate::ports::editor_buffer::EditorBufferPort;
 use crate::ports::editor_rows::EditorRowsPort;
+use crate::ports::status_message::StatusMessagePort;
 use crate::{adapters::cursor::CursorController, log_info};
 
-use crossterm::{event, queue, terminal};
+use crossterm::{event, queue, style, terminal};
 
 use std::cmp;
 use std::io::{self, stdout, Write};
@@ -16,6 +18,7 @@ pub struct EditorDomain {
     buffer: Box<dyn EditorBufferPort>,
     cursor_controller: Box<dyn CursorControllerPort>,
     editor_rows: Box<dyn EditorRowsPort>,
+    status_message: Box<dyn StatusMessagePort>,
 }
 
 impl EditorDomainPort for EditorDomain {
@@ -29,6 +32,7 @@ impl EditorDomainPort for EditorDomain {
             buffer: Box::new(EditorBuffer::new()),
             cursor_controller: Box::new(CursorController::new(window_size)),
             editor_rows: Box::new(EditorRows::new()),
+            status_message: Box::new(StatusMessage::new("HELP: Ctrl-Q = Quit".into())),
         }
     }
 
@@ -72,12 +76,55 @@ impl EditorDomainPort for EditorDomain {
                 terminal::Clear(terminal::ClearType::UntilNewLine)
             )?;
 
-            if i < screen_rows - 1 {
-                self.buffer.append_str("\r\n");
-            }
+            // if i < screen_rows - 1 {
+            self.buffer.append_str("\r\n");
+            // }
             stdout().flush()?;
         }
         Ok(())
+    }
+
+    fn draw_status_bar(&mut self) {
+        self.buffer
+            .append_str(&style::Attribute::Reverse.to_string());
+        let info = format!(
+            "{} -- {} lines",
+            self.editor_rows
+                .get_file_name()
+                .and_then(|path| path.file_name())
+                .and_then(|name| name.to_str())
+                .unwrap_or("[No Name]"),
+            self.editor_rows.number_of_rows()
+        );
+        let info_len = cmp::min(info.len(), self.window_size.0);
+        let line_info = format!(
+            "{}/{}",
+            self.cursor_controller.get_cursor_position().1 + 1,
+            self.editor_rows.number_of_rows()
+        );
+        self.buffer.append_str(&info[..info_len]);
+        for i in info_len..self.window_size.0 {
+            if self.window_size.0 - i == line_info.len() {
+                self.buffer.append_str(&line_info);
+                break;
+            } else {
+                self.buffer.append_char(' ')
+            }
+        }
+        self.buffer.append_str(&style::Attribute::Reset.to_string());
+        self.buffer.append_str("\r\n");
+    }
+
+    fn draw_message_bar(&mut self) {
+        queue!(
+            self.buffer,
+            terminal::Clear(terminal::ClearType::UntilNewLine)
+        )
+        .unwrap();
+        if let Some(msg) = self.status_message.message() {
+            self.buffer
+                .append_str(&msg[..cmp::min(self.window_size.0, msg.len())]);
+        }
     }
 
     fn get_buffer(&mut self) -> &mut dyn EditorBufferPort {
@@ -85,7 +132,7 @@ impl EditorDomainPort for EditorDomain {
     }
 
     fn get_window_size(&self) -> io::Result<(usize, usize)> {
-        terminal::size().map(|(w, h)| (w as usize, h as usize))
+        terminal::size().map(|(w, h)| (w as usize, h as usize - 2))
     }
 
     fn get_cursor_position(&self) -> (usize, usize) {

@@ -2,6 +2,7 @@ use crate::ports::config;
 use crate::ports::editor::EditorDomainPort;
 use crate::ports::terminal_io::{CursorEventTypes, ReaderPort, WriterPort};
 use crossterm::event;
+use crossterm::terminal;
 use std::{cmp, io};
 
 #[warn(dead_code)]
@@ -14,10 +15,14 @@ pub struct EditorApp<R: ReaderPort, W: WriterPort, E: EditorDomainPort> {
 
 impl<R: ReaderPort, W: WriterPort, E: EditorDomainPort> EditorApp<R, W, E> {
     pub fn new(reader: R, writer: W, config: config::Config) -> Self {
+        // Obtain the window size before initializing the domain
+        let window_size = terminal::size()
+            .map(|(w, h)| (w as usize, h as usize - 2))
+            .unwrap();
         Self {
             reader,
             writer,
-            domain: E::new(E::get_window_size().unwrap()),
+            domain: E::new(window_size),
             config,
         }
     }
@@ -83,6 +88,8 @@ impl<R: ReaderPort, W: WriterPort, E: EditorDomainPort> EditorApp<R, W, E> {
             .unwrap();
 
         self.domain.draw_rows().unwrap();
+        self.domain.draw_status_bar();
+        self.domain.draw_message_bar();
 
         self.writer
             .cursor_event(

@@ -1,5 +1,6 @@
 use crate::adapters::editor_rows::Row;
 use std::any::Any;
+use std::path;
 
 pub trait RowPort: Any {
     fn new(row_content: Box<str>, render: String) -> Self
@@ -18,4 +19,5 @@ pub trait EditorRowsPort {
     fn render_row(&self, row: &mut Row);
     fn get_render(&self, at: usize) -> &String;
     fn get_editor_row(&self, at: usize) -> &dyn RowPort;
+    fn get_file_name(&self) -> Option<&path::PathBuf>;
 }

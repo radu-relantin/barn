@@ -27,13 +27,14 @@ impl RowPort for Row {
 
 pub struct EditorRows {
     row_content: Vec<Rc<dyn RowPort>>,
+    file_name: Option<path::PathBuf>,
 }
 
 impl EditorRows {
-    pub fn from_file(file: &path::Path) -> Self {
-        let file_contents = fs::read_to_string(file).expect("Unable to read file");
+    pub fn from_file(file: path::PathBuf) -> Self {
+        let file_content = fs::read_to_string(&file).expect("Unable to read file");
 
-        let row_content = file_contents
+        let row_content = file_content
             .lines()
             .map(|line| {
                 let row = Row::new(line.into(), String::new());
@@ -41,7 +42,10 @@ impl EditorRows {
             })
             .collect();
 
-        Self { row_content }
+        Self {
+            row_content,
+            file_name: Some(file),
+        }
     }
 }
 
@@ -52,8 +56,9 @@ impl EditorRowsPort for EditorRows {
         match arg.nth(1) {
             None => Self {
                 row_content: Vec::new(),
+                file_name: None,
             },
-            Some(file) => Self::from_file(&path::Path::new(&file)),
+            Some(file) => Self::from_file(file.into()),
         }
     }
 
@@ -69,7 +74,7 @@ impl EditorRowsPort for EditorRows {
         &self.row_content[at].get_render()
     }
 
-    // NOTE & WARNING: Don't be this guy...
+    // HINT & WARNING: Don't be this guy...
     // fn get_editor_row(&self, at: usize) -> &Row {
     //     self.row_content[at]
     //         .as_ref() // Get a reference to the `dyn RowPort`
@@ -78,9 +83,13 @@ impl EditorRowsPort for EditorRows {
     //         .expect("Downcast to Row failed")
     // }
 
-    // NOTE & WARNING: Be this guy instead :)
+    // HINT & WARNING: Be this guy instead :)
     fn get_editor_row(&self, at: usize) -> &dyn RowPort {
         &*self.row_content[at]
+    }
+
+    fn get_file_name(&self) -> Option<&path::PathBuf> {
+        self.file_name.as_ref()
     }
 
     fn render_row(&self, row: &mut Row) {

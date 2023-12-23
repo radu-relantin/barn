@@ -65,7 +65,11 @@ impl CursorControllerPort for CursorController {
                     }
                 }
             }
-            KeyCode::End => self.cursor_x = self.screen_cols - 1,
+            KeyCode::End => {
+                if self.cursor_y < number_of_rows {
+                    self.cursor_x = editor_rows.get_row(self.cursor_y).len();
+                }
+            }
             KeyCode::Home => self.cursor_x = 0,
             _ => unimplemented!(),
         }

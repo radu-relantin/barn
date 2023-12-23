@@ -15,4 +15,6 @@ pub trait EditorDomainPort {
     fn scroll(&mut self);
     fn get_cursor_controller(&mut self) -> &mut dyn CursorControllerPort;
     fn get_editor_rows(&mut self) -> &mut dyn EditorRowsPort;
+    fn draw_status_bar(&mut self);
+    fn draw_message_bar(&mut self);
 }
