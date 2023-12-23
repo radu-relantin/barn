@@ -1,4 +1,4 @@
-use crossterm::terminal;
+use crossterm::{style, terminal};
 use std::io;
 
 pub trait EditorBufferPort: io::Write {
@@ -11,4 +11,5 @@ pub trait EditorBufferPort: io::Write {
     fn clear_screen(&mut self, clear_type: terminal::ClearType) -> io::Result<()>;
     fn move_cursor_to(&mut self, x: u16, y: u16) -> io::Result<()>;
     fn show_cursor(&mut self) -> io::Result<()>;
+    fn set_style(&mut self, style: style::Attribute) -> io::Result<()>;
 }

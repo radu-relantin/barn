@@ -88,6 +88,18 @@ impl CursorControllerPort for CursorController {
         )
     }
 
+    fn get_render_x(&self, row: &dyn RowPort) -> usize {
+        row.get_content()[..self.cursor_x]
+            .chars()
+            .fold(0, |render_x, c| {
+                if c == '\t' {
+                    render_x + (TAB_STOP - 1) - (render_x % TAB_STOP) + 1
+                } else {
+                    render_x + 1
+                }
+            })
+    }
+
     fn set_cursor_position(&mut self, x: usize, y: usize) {
         self.cursor_x = x;
         self.cursor_y = y;
@@ -99,18 +111,6 @@ impl CursorControllerPort for CursorController {
 
     fn get_col_offset(&self) -> usize {
         self.col_offset
-    }
-
-    fn get_render_x(&self, row: &dyn RowPort) -> usize {
-        row.get_content()[..self.cursor_x]
-            .chars()
-            .fold(0, |render_x, c| {
-                if c == '\t' {
-                    render_x + (TAB_STOP - 1) - (render_x % TAB_STOP) + 1
-                } else {
-                    render_x + 1
-                }
-            })
     }
 
     fn scroll(&mut self, editor_rows: &dyn EditorRowsPort) {

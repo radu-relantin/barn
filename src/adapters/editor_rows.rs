@@ -10,11 +10,13 @@ pub struct Row {
 }
 
 impl RowPort for Row {
-    fn new(row_content: Box<str>, render: String) -> Self {
-        Self {
+    fn new(row_content: Box<str>, _render: String) -> Self {
+        let mut row = Self {
             row_content,
-            render,
-        }
+            render: String::new(),
+        };
+        row.update_render();
+        row
     }
     fn get_content(&self) -> &str {
         &self.row_content
@@ -22,6 +24,25 @@ impl RowPort for Row {
 
     fn get_render(&self) -> &String {
         &self.render
+    }
+}
+
+impl Row {
+    fn update_render(&mut self) {
+        let mut index = 0;
+        self.render.clear();
+        self.row_content.chars().for_each(|c| {
+            index += 1;
+            if c == '\t' {
+                self.render.push(' ');
+                while index % TAB_STOP != 0 {
+                    self.render.push(' ');
+                    index += 1;
+                }
+            } else {
+                self.render.push(c);
+            }
+        });
     }
 }
 
@@ -62,6 +83,10 @@ impl EditorRowsPort for EditorRows {
         }
     }
 
+    fn render_row(&self, row: &mut Row) {
+        row.update_render();
+    }
+
     fn number_of_rows(&self) -> usize {
         self.row_content.len()
     }
@@ -74,42 +99,11 @@ impl EditorRowsPort for EditorRows {
         &self.row_content[at].get_render()
     }
 
-    // HINT & WARNING: Don't be this guy...
-    // fn get_editor_row(&self, at: usize) -> &Row {
-    //     self.row_content[at]
-    //         .as_ref() // Get a reference to the `dyn RowPort`
-    //         .as_any() // Call `as_any` on the `dyn RowPort` reference
-    //         .downcast_ref::<Row>()
-    //         .expect("Downcast to Row failed")
-    // }
-
-    // HINT & WARNING: Be this guy instead :)
     fn get_editor_row(&self, at: usize) -> &dyn RowPort {
         &*self.row_content[at]
     }
 
     fn get_file_name(&self) -> Option<&path::PathBuf> {
         self.file_name.as_ref()
-    }
-
-    fn render_row(&self, row: &mut Row) {
-        let mut index = 0;
-        let capacity = row
-            .row_content
-            .chars()
-            .fold(0, |acc, next| acc + if next == '\t' { TAB_STOP } else { 1 });
-        row.render = String::with_capacity(capacity);
-        row.row_content.chars().for_each(|c| {
-            index += 1;
-            if c == '\t' {
-                row.render.push(' ');
-                while index % TAB_STOP != 0 {
-                    row.render.push(' ');
-                    index += 1
-                }
-            } else {
-                row.render.push(c);
-            }
-        });
     }
 }

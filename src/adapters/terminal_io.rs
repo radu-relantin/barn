@@ -256,6 +256,14 @@ mod tests {
             *self.is_cursor_hidden.borrow_mut() = false;
             Ok(())
         }
+
+        fn set_style(&mut self, style: crossterm::style::Attribute) -> io::Result<()> {
+            match style {
+                crossterm::style::Attribute::Reset => {}
+                _ => {}
+            }
+            Ok(())
+        }
     }
 
     #[test]

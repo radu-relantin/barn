@@ -37,81 +37,113 @@ impl EditorDomainPort for EditorDomain {
     }
 
     fn draw_rows(&mut self) -> io::Result<()> {
+        // Define the screen dimensions
         let screen_rows = self.window_size.1;
         let screen_columns = self.window_size.0;
+
+        // Iterate through each row on the screen
         for i in 0..screen_rows {
+            // Calculate the corresponding row in the file based on the current scroll position
             let file_row = i + self.cursor_controller.get_row_offset();
+
+            // Check if the current screen row has a corresponding file row
             if file_row >= self.editor_rows.number_of_rows() {
+                // If the file has no content and we're at the middle third of the screen
                 if self.editor_rows.number_of_rows() == 0 && i == screen_rows / 3 {
-                    // Draw a welcome message in the center of the screen
+                    // Prepare a welcome message
                     let mut welcome =
                         format!("BARN Editor --- Version {}", env!("CARGO_PKG_VERSION"));
+
+                    // Truncate the message if it exceeds screen width
                     if welcome.len() > screen_columns {
-                        // truncate the welcome message if it's too long
-                        welcome.truncate(screen_columns)
+                        welcome.truncate(screen_columns);
                     }
-                    // center the welcome message
+
+                    // Calculate padding to center the message
                     let mut padding = (screen_columns - welcome.len()) / 2;
+                    // Draw a tilde before the welcome message if there's space
                     if padding != 0 {
                         self.buffer.append_char('~');
-                        padding -= 1
+                        padding -= 1; // Reduce padding by one for the tilde
                     }
-                    // add padding
+
+                    // Add spaces to pad out the message
                     (0..padding).for_each(|_| self.buffer.append_char(' '));
-                    // add the welcome message
+
+                    // Append the welcome message
                     self.buffer.append_str(&welcome);
                 } else {
-                    // otherwise draw a tilde
-                    self.buffer.append_char('~')
+                    // For empty file rows, draw a tilde
+                    self.buffer.append_char('~');
                 }
             } else {
+                // Get the content of the file row and the column offset for horizontal scrolling
                 let row = self.editor_rows.get_render(file_row);
                 let col_offset = self.cursor_controller.get_col_offset();
+                // Determine the length of the text to be displayed on the screen
                 let len = cmp::min(row.len().saturating_sub(col_offset), screen_columns);
                 let start = if len == 0 { 0 } else { col_offset };
+                // Append the part of the row that fits on the screen
                 self.buffer.append_str(&row[start..start + len]);
             }
+
+            // Clear to the end of the line to remove any previous content
             queue!(
                 self.buffer,
                 terminal::Clear(terminal::ClearType::UntilNewLine)
             )?;
 
-            // if i < screen_rows - 1 {
+            // Move to the next line
             self.buffer.append_str("\r\n");
-            // }
-            stdout().flush()?;
+            stdout().flush()?; // Flush the buffer to apply changes to the terminal
         }
+
         Ok(())
     }
 
     fn draw_status_bar(&mut self) {
-        self.buffer
-            .append_str(&style::Attribute::Reverse.to_string());
-        let info = format!(
-            "{} -- {} lines",
-            self.editor_rows
-                .get_file_name()
-                .and_then(|path| path.file_name())
-                .and_then(|name| name.to_str())
-                .unwrap_or("[No Name]"),
-            self.editor_rows.number_of_rows()
-        );
-        let info_len = cmp::min(info.len(), self.window_size.0);
+        // Set the style of the buffer to Reverse (inverts the foreground and background colors)
+        self.buffer.set_style(style::Attribute::Reverse).unwrap();
+
+        // Retrieve the file name, default to "[No Name]" if not available
+        let file_name = self
+            .editor_rows
+            .get_file_name()
+            .and_then(|path| path.file_name())
+            .and_then(|name| name.to_str())
+            .unwrap_or("[No Name]");
+
+        // Create a string with the current line and total lines information
         let line_info = format!(
             "{}/{}",
             self.cursor_controller.get_cursor_position().1 + 1,
             self.editor_rows.number_of_rows()
         );
-        self.buffer.append_str(&info[..info_len]);
-        for i in info_len..self.window_size.0 {
-            if self.window_size.0 - i == line_info.len() {
-                self.buffer.append_str(&line_info);
-                break;
-            } else {
-                self.buffer.append_char(' ')
-            }
-        }
-        self.buffer.append_str(&style::Attribute::Reset.to_string());
+
+        // Create a string with file information and the number of lines
+        let info = format!(
+            "{} -- {} lines",
+            file_name,
+            self.editor_rows.number_of_rows()
+        );
+        // Determine the length of the info, limiting it to the window width minus the length of line_info
+        let info_len = cmp::min(info.len(), self.window_size.0 - line_info.len());
+
+        // Construct the status bar string.
+        // Format the file info to occupy the left side (info_len width) and line info on the right
+        let status_bar = format!(
+            "{:<info_len$}{:>line_info_len$}",
+            info,
+            line_info,
+            info_len = info_len,
+            line_info_len = self.window_size.0 - info_len
+        );
+
+        // Append the constructed status bar string to the buffer
+        self.buffer.append_str(&status_bar);
+        // Reset the buffer's style to default
+        self.buffer.set_style(style::Attribute::Reset).unwrap();
+        // Append a new line character to move to the next line
         self.buffer.append_str("\r\n");
     }
 

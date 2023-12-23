@@ -1,5 +1,5 @@
 use crate::ports::editor_buffer::EditorBufferPort;
-use crossterm::{cursor, queue, terminal};
+use crossterm::{cursor, queue, style, terminal};
 use std::io::{self, stdout};
 
 pub struct EditorBuffer {
@@ -35,6 +35,10 @@ impl EditorBufferPort for EditorBuffer {
 
     fn show_cursor(&mut self) -> io::Result<()> {
         queue!(self, cursor::Show)
+    }
+
+    fn set_style(&mut self, style: style::Attribute) -> io::Result<()> {
+        queue!(self, style::SetAttribute(style))
     }
 }
 
