@@ -1,5 +1,117 @@
+# Barn Editor Configuration File
+
+[general]
+theme = "dark"                # Options: 'dark', 'light', 'solarized', etc.
+tab_width = 4
+auto_indent = true
+line_numbers = true
+highlight_current_line = true
+wrap_text = false
+
 [cursor_keymaps]
+# Normal mode keybindings (similar to Vim's normal mode)
 down = "j"
 up = "k"
 left = "h"
 right = "l"
+page_up = "ctrl-u"
+page_down = "ctrl-d"
+start_of_line = "0"
+end_of_line = "$"
+first_line = "gg"
+last_line = "G"
+find = "/"
+replace = ":%s"
+save = ":w"
+save_as = ":w "
+quit = ":q"
+
+# Insert mode keybindings (when in typing/edit mode)
+insert_mode = "i"
+exit_insert_mode = "esc"
+
+# Visual mode keybindings (for text selection)
+visual_mode = "v"
+visual_line_mode = "V"
+copy = "y"
+cut = "d"
+paste = "p"
+
+[appearance]
+font_family = "Fira Code"
+font_size = 12
+show_whitespace = false
+color_scheme = "Monokai"
+
+[search]
+ignore_case = true
+regex_search = false
+
+[macros]
+# Define custom macros
+macro1 = ["down", "down", "copy"]
+macro2 = ["up", "paste"]
+
+[special_characters]
+# Custom mappings for special characters
+tab = "    " # Four spaces for a tab character
+
+[editor_behavior]
+auto_save = true
+auto_save_interval = 300 # Seconds
+backup_on_save = true
+undo_limit = 1000
+
+[files]
+# File specific settings
+[files."*.md"]
+tab_width = 2
+wrap_text = true
+
+[files."*.rs"]
+tab_width = 4
+auto_indent = true
+
+[extensions]
+
+# Spell Checker Extension
+[extensions.spell_checker]
+enabled = true
+language = "en-US"
+custom_dictionary = ["tech", "rustlang"]
+ignore_words = ["barneditor", "rustacean"]
+highlight_mistakes = true
+auto_correct = false
+
+# File Explorer Extension
+[extensions.file_explorer]
+enabled = true
+default_directory = "~/projects"
+show_hidden_files = false
+preview_files = true
+
+# Git Integration Extension
+[extensions.git_integration]
+enabled = true
+auto_fetch = true
+auto_commit = false
+commit_message_template = "Updates made on {date}"
+
+# Markdown Preview Extension
+[extensions.markdown_preview]
+enabled = true
+live_preview = true
+preview_theme = "github"
+
+# Code Formatter Extension
+[extensions.code_formatter]
+enabled = true
+format_on_save = true
+languages = ["rust", "javascript", "python"]
+
+# Custom Extension Example
+[extensions.custom_extension]
+enabled = true
+# Custom configurations specific to the custom extension
+option1 = "value1"
+option2 = 42
