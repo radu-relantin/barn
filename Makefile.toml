@@ -1,0 +1,35 @@
+[env]
+CARGO_MAKE_WORKING_DIRECTORY = "."
+
+[tasks.pre-clean]
+description = "Clean up old executable if it exists"
+condition = { files_exist = ["barn"] }
+command = "rm"
+args = ["barn"]
+
+[tasks.build]
+description = "Builds the barn project"
+command = "cargo"
+args = ["build", "--release"]
+dependencies = ["pre-clean"]
+
+[tasks.post-build]
+description = "Moves the executable to the project root"
+condition = { files_exist = ["./target/release/barn"] }
+script = ['''
+    #!/usr/bin/env sh
+    # Cross-platform move command
+    if command -v mv > /dev/null; then
+        mv ./target/release/barn .
+    elif command -v move > /dev/null; then
+        move ./target/release/barn .
+    else
+        echo "Move command not found!"
+        exit 1
+    fi
+    ''']
+dependencies = ["build"]
+
+[tasks.default]
+description = "Default task to build and move the executable"
+dependencies = ["post-build"]

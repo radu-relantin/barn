@@ -1,5 +1,5 @@
-use crossterm::event::KeyCode;
 use crate::ports::editor_rows::EditorRowsPort;
+use crossterm::event::KeyCode;
 
 pub trait CursorControllerPort {
     fn new(window_size: (usize, usize)) -> Self
