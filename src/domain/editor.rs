@@ -104,6 +104,7 @@ impl EditorDomainPort for EditorDomain {
     fn draw_status_bar(&mut self) {
         // Set the style of the buffer to Reverse (inverts the foreground and background colors)
         self.buffer.set_style(style::Attribute::Reverse).unwrap();
+        self.buffer.set_style(style::Attribute::Bold).unwrap();
 
         // Retrieve the file name, default to "[No Name]" if not available
         let file_name = self
